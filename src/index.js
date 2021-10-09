@@ -16,25 +16,93 @@ const repeatThreeTimes = (string) => string.repeat(3);
 console.log(compose(repeatThreeTimes, makeLouder, addBoundarySpaces)("hello"));
 
 //============================================================================================================
-
-//================================CreateStore Demo===============================================================
+//================================CreateStore Demo============================================================
 
 const initialState = { value: 0 };
 
 const INCREMENT = "INCREMENT";
+const ADD = "ADD";
 
-const incrementAction = { type: INCREMENT };
+// Action creators
+const increment = () => ({ type: INCREMENT });
 
-const reducer = (state, action) => {
+const add = (amount) => ({ type: ADD, payload: amount });
+
+const reducer = (state = initialState, action) => {
   if (action.type === INCREMENT) {
     return { value: state.value + 1 };
+  }
+
+  if (action.type === ADD) {
+    return { value: state.value + action.payload };
   }
 
   return state;
 };
 
-const store = createStore(reducer);
+//============================================================================================================
+/**
 
+const logEnhancer = (createStore) => (reducer, initialState, enhancer) => {
+  const logReducer = (state, action) => {
+    const newState = reducer(state, action);
+
+    console.group(action.type);
+    console.log("%cPrevious state: ", "color: blue; font-weight: bold;", state);
+    console.log("%cNext state: ", "color: green; font-weight: bold;", newState);
+    console.groupEnd();
+
+    return newState;
+  };
+
+  return createStore(logReducer, initialState, enhancer);
+};
+const store = createStore(reducer, logEnhancer);
+
+ */
+
+const logMiddleware = (store) => (next) => (action) => {
+  console.group(action.type);
+  console.log(
+    "%cPrevious state: ",
+    "color: blue; font-weight: bold;",
+    store.getState()
+  );
+
+  next(action);
+
+  console.log(
+    "%cNext state: ",
+    "color: green; font-weight: bold;",
+    store.getState()
+  );
+  console.groupEnd();
+};
+
+const store = createStore(reducer, applyMiddleware(logMiddleware));
 console.log(store);
+
+const subscriber = () => console.log("SUBSCRIBER", store.getState());
+store.subscribe(subscriber);
+
+//store.dispatch(increment());
+//store.dispatch(add(2));
+
+//============================================================================================================
+//================================bindActionCreators Demo=====================================================
+
+const actions = bindActionCreators({ increment, add }, store.dispatch);
+console.log(actions);
+
+actions.increment();
+actions.add(5);
+
+// Simple implementation of bindActionCreators
+const [boundIncrement, boundAdd] = [increment, add].map((fn) =>
+  compose(store.dispatch, fn)
+);
+
+boundIncrement();
+boundAdd(5);
 
 //============================================================================================================
